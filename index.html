@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIレシピ・シェフ | 食材から即座にレシピ提案</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- App Icons -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-utensils logo-icon"></i>
+                <span class="logo-text">AI レシピ・シェフ</span>
+            </div>
+            <button id="btn-settings" class="btn-icon" title="APIキー設定" aria-label="APIキー設定">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            
+            <!-- API Key Configuration Section -->
+            <section id="section-api-key" class="card fade-in hidden">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-key header-icon"></i>Gemini API キーの設定</h2>
+                    <p>レシピを提案するには Google Gemini の API キーが必要です。</p>
+                </div>
+                <div class="card-body">
+                    <!-- Direct Link Button to AI Studio -->
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="btn btn-success btn-block pulse-light text-center" style="text-decoration: none; justify-content: center; align-items: center; gap: 8px; margin-bottom: 20px;">
+                        <i class="fa-brands fa-google"></i> 1クリックでAPIキーを取得（無料）
+                    </a>
+
+                    <div class="api-instructions" style="margin-bottom: 20px;">
+                        <h3>簡単3ステップ取得方法：</h3>
+                        <ol>
+                            <li>上の緑色のボタンから Google AI Studio に進みます。</li>
+                            <li>「Create API key」を押して生成されたキー（AIzaSy...）をコピーします。</li>
+                            <li>コピーしたキーを下の欄に貼り付けて「設定を保存する」を押します。</li>
+                        </ol>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="input-api-key">Gemini API キー</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="input-api-key" placeholder="AIzaSy...">
+                            <button id="btn-toggle-key" class="btn-icon-sub" type="button">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <span class="helper-text">入力されたキーはブラウザ（ローカルストレージ）にのみ保存され、外部に送信されることはありません。</span>
+                    </div>
+                    
+                    <button id="btn-save-key" class="btn btn-primary btn-block">
+                        <i class="fa-solid fa-floppy-disk"></i> 設定を保存する
+                    </button>
+                </div>
+            </section>
+
+            <!-- Input Method Selection & Controls -->
+            <section id="section-input" class="card fade-in">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="tab-camera">
+                        <i class="fa-solid fa-camera"></i> カメラで撮影
+                    </button>
+                    <button class="tab-btn" data-tab="tab-upload">
+                        <i class="fa-solid fa-image"></i> 写真を選択
+                    </button>
+                    <button class="tab-btn" data-tab="tab-text">
+                        <i class="fa-solid fa-keyboard"></i> 文字で入力
+                    </button>
+                </div>
+
+                <div class="tab-content-wrapper">
+                    <!-- Tab: Camera -->
+                    <div id="tab-camera" class="tab-content active">
+                        <div class="camera-container">
+                            <video id="webcam" autoplay playsinline muted></video>
+                            <canvas id="photo-canvas" class="hidden"></canvas>
+                            <div id="camera-placeholder" class="camera-placeholder hidden">
+                                <i class="fa-solid fa-video-slash"></i>
+                                <p>カメラを起動中、または権限がありません。</p>
+                                <button id="btn-retry-camera" class="btn btn-secondary btn-sm">カメラを再起動</button>
+                            </div>
+                            <img id="captured-image-preview" class="hidden" alt="キャプチャ画像">
+                            <!-- Overlay controls on camera -->
+                            <div class="camera-overlay-controls">
+                                <button id="btn-switch-camera" class="btn-circle" title="カメラ切り替え">
+                                    <i class="fa-solid fa-rotate"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="controls">
+                            <button id="btn-capture" class="btn btn-primary btn-lg btn-block">
+                                <i class="fa-solid fa-camera-retro"></i> 食材を撮影する
+                            </button>
+                            <button id="btn-recapture" class="btn btn-secondary btn-lg btn-block hidden">
+                                <i class="fa-solid fa-arrows-rotate"></i> もう一度撮影する
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Upload -->
+                    <div id="tab-upload" class="tab-content">
+                        <div class="upload-dropzone" id="dropzone">
+                            <input type="file" id="file-input" accept="image/*" class="hidden">
+                            <div class="dropzone-content">
+                                <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                                <p class="primary-text">ここに画像をドラッグ＆ドロップ</p>
+                                <p class="secondary-text">またはファイルを選択</p>
+                                <button id="btn-select-file" class="btn btn-secondary btn-sm">ファイルを選択</button>
+                            </div>
+                            <img id="uploaded-image-preview" class="hidden" alt="アップロードされた画像">
+                        </div>
+                    </div>
+
+                    <!-- Tab: Text -->
+                    <div id="tab-text" class="tab-content">
+                        <div class="text-input-container">
+                            <label for="textarea-ingredients">手持ちの食材を入力（カンマ区切り、または改行）</label>
+                            <textarea id="textarea-ingredients" rows="4" placeholder="例: 豚肉、キャベツ、玉ねぎ、卵"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Run AI Analysis button (Global trigger for Upload/Text, or state execution) -->
+                <div id="submit-section" class="submit-action-area hidden">
+                    <button id="btn-analyze" class="btn btn-success btn-lg btn-block animate-pulse">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> レシピを提案してもらう
+                    </button>
+                </div>
+            </section>
+
+            <!-- Loading State Screen -->
+            <section id="section-loading" class="loading-container hidden">
+                <div class="cooking-animation">
+                    <div class="pan-handle"></div>
+                    <div class="pan">
+                        <div class="food food-1"></div>
+                        <div class="food food-2"></div>
+                        <div class="food food-3"></div>
+                    </div>
+                    <div class="pan-shadow"></div>
+                </div>
+                <h3 class="loading-title">食材を分析中...</h3>
+                <p class="loading-subtitle">シェフが美味しいレシピを考えています。しばらくお待ちください。</p>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </section>
+
+            <!-- Results Screen -->
+            <section id="section-results" class="results-container hidden">
+                
+                <!-- Ingredients Section -->
+                <div class="card ingredients-card fade-in">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-basket-shopping header-icon"></i> 認識された食材</h2>
+                        <p>食材の削除や追加を行い、レシピを再提案させることができます。</p>
+                    </div>
+                    <div id="result-image-wrapper" class="result-image-wrapper hidden">
+                        <img id="result-image-preview" src="" alt="解析された食材の写真">
+                    </div>
+                    <button id="btn-reset" class="btn btn-secondary btn-block" style="margin-bottom: 20px;">
+                        <i class="fa-solid fa-arrow-left"></i> トップに戻って別の写真を撮影
+                    </button>
+                    <div class="card-body">
+                        <p class="helper-text-info" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
+                            <i class="fa-solid fa-lightbulb" style="color: #f1c40f;"></i> 食材の 👑 ボタンを押すと、その食材を<strong>「主役（メイン）」</strong>に指定できます。指定したら再検索してください。
+                        </p>
+                        <div id="ingredients-chips" class="chips-container">
+                            <!-- Chips will be generated here -->
+                        </div>
+                        <div class="add-ingredient-form">
+                            <input type="text" id="input-add-ingredient" placeholder="他の食材を追加...">
+                            <button id="btn-add-ingredient" class="btn btn-secondary">
+                                <i class="fa-solid fa-plus"></i> 追加
+                            </button>
+                        </div>
+                        <button id="btn-reanalyze" class="btn btn-primary btn-block mt-3">
+                            <i class="fa-solid fa-rotate-right"></i> この食材リストでレシピを再検索
+                        </button>
+                        <button id="btn-upgrade" class="btn btn-success btn-block mt-2">
+                            <i class="fa-solid fa-circle-arrow-up"></i> 食材をプラスしてごちそうレシピにする
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recipes List Section -->
+                <div class="recipes-header-wrapper fade-in">
+                    <h2 class="section-title"><i class="fa-solid fa-utensils"></i> おすすめレシピ</h2>
+                    <p class="section-subtitle">以下のレシピが作れます！カードをタップして詳細を確認しましょう。</p>
+                </div>
+                
+                <div id="recipes-grid" class="recipes-grid">
+                    <!-- Recipe Cards will be generated here -->
+                </div>
+            </section>
+
+        </main>
+        
+        <!-- Recipe Detail Modal (Overlay) -->
+        <div id="recipe-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <button id="btn-close-modal" class="modal-close" aria-label="閉じる">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                
+                <div class="modal-body-content">
+                    <div id="modal-recipe-header" class="modal-recipe-header">
+                        <!-- Dynamic content -->
+                    </div>
+                    
+                    <div class="modal-recipe-meta">
+                        <span id="modal-recipe-time" class="meta-tag"><i class="fa-regular fa-clock"></i> 15分</span>
+                        <span id="modal-recipe-difficulty" class="meta-tag"><i class="fa-solid fa-gauge-high"></i> 簡単</span>
+                        <span id="modal-recipe-match" class="meta-tag highlight"><i class="fa-solid fa-circle-check"></i> 食材のみでOK</span>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-solid fa-carrot"></i> 材料（分量）</h3>
+                        <ul id="modal-recipe-materials" class="materials-list">
+                            <!-- Dynamic list -->
+                        </ul>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-solid fa-list-ol"></i> 作り方ステップ</h3>
+                        <ol id="modal-recipe-steps" class="steps-list">
+                            <!-- Dynamic list -->
+                        </ol>
+                    </div>
+
+                    <div id="modal-recipe-tips-wrapper" class="modal-section tips-section">
+                        <h3><i class="fa-regular fa-lightbulb"></i> シェフのコツ・ポイント</h3>
+                        <p id="modal-recipe-tips"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>&copy; 2026 AI Recipe Chef. All rights reserved.</p>
+        </footer>
+
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="gemini.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
