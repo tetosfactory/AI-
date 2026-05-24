@@ -270,6 +270,32 @@ a:hover {
     box-shadow: 0 6px 20px rgba(16, 172, 132, 0.35);
 }
 
+.btn-warning {
+    background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.25);
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.35);
+}
+
+.ribbon-zubora {
+    position: absolute;
+    top: -10px;
+    right: 15px;
+    background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+    color: white;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    box-shadow: 0 4px 10px rgba(243, 156, 18, 0.25);
+    z-index: 1;
+}
+
 .btn-block {
     display: flex;
     width: 100%;
@@ -1418,95 +1444,97 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   RECIPE UPGRADE BADGES & CARD GLOWS
+   RECIPE UPGRADE BADGES & CARD GLOWS - CASUAL & COZY CAFE STYLE
    ========================================================================== */
 .recipe-card.recipe-card-upgrade {
-    border: 2px solid rgba(255, 107, 107, 0.4) !important;
-    background: linear-gradient(to bottom, var(--card-bg), rgba(255, 107, 107, 0.04)) !important;
+    border: 1.5px dashed var(--primary-color) !important;
+    background: linear-gradient(to bottom, var(--card-bg), rgba(255, 159, 67, 0.03)) !important;
     position: relative;
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.08) !important;
+    box-shadow: var(--shadow-sm) !important;
 }
 
 .recipe-card.recipe-card-upgrade:hover {
-    border-color: #ff6b6b !important;
-    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.22) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 8px 20px rgba(255, 159, 67, 0.15) !important;
 }
 
 .ribbon-upgrade {
-    background: linear-gradient(135deg, #ff416c, #ff4b2b) !important;
+    background: linear-gradient(135deg, #ff9f43, #ff6b6b) !important;
     color: white;
     font-size: 0.75rem;
     font-weight: 800;
     padding: 4px 12px;
     border-radius: 20px;
     white-space: nowrap;
-    box-shadow: 0 4px 10px rgba(255, 75, 43, 0.35);
+    box-shadow: 0 3px 8px rgba(255, 159, 67, 0.2);
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    animation: pulse-light 1.5s infinite alternate;
+    animation: gentle-bounce 2s infinite alternate;
+}
+
+@keyframes gentle-bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-2px); }
 }
 
 /* ==========================================================================
-   SUPER NEON RAINBOW UPGRADE CONTAINER
+   SUPER NEON UPGRADE -> CASUAL CAFE BANNER
    ========================================================================== */
 .super-upgrade-container {
-    background: #0d0e12 !important; /* Premium dark background to pop up colors */
-    border: 2px solid transparent !important;
-    background-image: linear-gradient(#0d0e12, #0d0e12), linear-gradient(135deg, #ff007f, #7f00ff, #39ef7d, #ffe259) !important;
-    background-origin: border-box !important;
-    background-clip: padding-box, border-box !important;
+    background: #fff9eb !important; /* Soft warm vanilla background */
+    border: 2px dashed #ff9f43 !important; /* Dotted warm orange kitchen border */
     border-radius: var(--radius-md) !important;
-    padding: 12px 16px !important;
+    padding: 14px 16px !important;
     margin: 12px 0 6px 0 !important;
-    box-shadow: 0 8px 24px rgba(255, 0, 127, 0.25) !important;
+    box-shadow: 0 4px 12px rgba(255, 159, 67, 0.1) !important;
     position: relative;
     overflow: hidden;
-    animation: neon-pulse 1.8s infinite alternate !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: gentle-float 3s ease-in-out infinite alternate !important;
 }
 
-@keyframes neon-pulse {
-    0% { box-shadow: 0 4px 15px rgba(255, 0, 127, 0.2); transform: scale(1); }
-    100% { box-shadow: 0 8px 30px rgba(127, 0, 255, 0.45); transform: scale(1.01); }
+@keyframes gentle-float {
+    0% { transform: translateY(0); box-shadow: 0 4px 12px rgba(255, 159, 67, 0.1); }
+    100% { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(255, 159, 67, 0.18); }
 }
 
 .super-upgrade-label {
-    color: #ff3366 !important;
-    font-size: 0.75rem !important;
-    font-weight: 900 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1.5px !important;
-    margin-bottom: 6px !important;
+    color: #e67e22 !important; /* Warm deep caramel orange */
+    font-size: 0.8rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
     display: flex !important;
     align-items: center !important;
     gap: 6px !important;
-    text-shadow: 0 0 10px rgba(255, 51, 102, 0.5) !important;
+    text-shadow: none !important;
 }
 
 .super-upgrade-food-names {
-    color: #38ef7d !important; /* Vivid neon green for the food names */
-    font-size: 1.15rem !important; /* Extra large font for direct readability */
+    color: #d35400 !important; /* Tasty dark terracotta color for food text */
+    font-size: 1.1rem !important;
     font-weight: 900 !important;
-    text-shadow: 0 0 12px rgba(56, 239, 125, 0.8) !important;
-    animation: text-shimmer 2.5s infinite alternate !important;
-}
-
-@keyframes text-shimmer {
-    0% { filter: brightness(0.9); }
-    100% { filter: brightness(1.2) drop-shadow(0 0 8px #38ef7d); }
-}
-
-/* Modal Neon Badge */
-.meta-tag.super-upgrade-modal-badge {
-    background: linear-gradient(135deg, #ff007f, #7f00ff) !important;
-    color: white !important;
-    font-weight: 900 !important;
-    font-size: 0.85rem !important;
-    padding: 6px 14px !important;
+    text-shadow: none !important;
+    animation: none !important;
+    background-color: #fff0d4 !important; /* Light bread crust color fill */
+    padding: 6px 12px !important;
     border-radius: var(--radius-sm) !important;
-    box-shadow: 0 4px 12px rgba(255, 0, 127, 0.3) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    width: fit-content !important;
+    border: 1px solid rgba(255, 159, 67, 0.25) !important;
+}
+
+/* Modal Upgrade Badge */
+.meta-tag.super-upgrade-modal-badge {
+    background: linear-gradient(135deg, #ff9f43, #ff6b6b) !important;
+    color: white !important;
+    font-weight: 800 !important;
+    font-size: 0.8rem !important;
+    padding: 5px 12px !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: 0 3px 8px rgba(255, 159, 67, 0.2) !important;
+    border: none !important;
     animation: pulse-light 1.5s infinite alternate;
 }
 

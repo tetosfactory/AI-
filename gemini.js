@@ -6,7 +6,63 @@ const GeminiService = {
     MODEL_NAME: 'gemini-2.5-flash',
     
     /**
-     * Call the Gemini API to analyze an image of ingredients and return recipes
+     * Call the Gemini API to ONLY recognize ingredients from an image (Step 1)
+     * @param {string} base64Image - Base64 image
+     * @param {string} mimeType - Image mime type
+     * @param {string} apiKey - Gemini API Key
+     * @returns {Promise<Object>} Object containing only the recognized ingredients array
+     */
+    async recognizeIngredients(base64Image, mimeType, apiKey) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${apiKey}`;
+        
+        const systemInstruction = 
+            "あなたは優秀なプロの料理シェフです。提供された食材の写真を分析し、写っている食材（野菜、肉、魚、果物、乳製品など）を正確に認識して日本語のリストとして返してください。\n" +
+            "一般的な調味料（塩、コショウ、油、醤油、水など）はリストから除外してください。";
+
+        const promptText = 
+            "添付された写真に写っている具体的な食材をすべて認識し、その名前のリストを返してください。\n" +
+            "回答は必ず指定されたJSONフォーマットに従って返してください。余計な説明や装飾は一切含めず、純粋なJSON文字列のみを出力してください。";
+
+        const requestBody = {
+            contents: [
+                {
+                    parts: [
+                        { text: promptText },
+                        {
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: base64Image
+                            }
+                        }
+                    ]
+                }
+            ],
+            systemInstruction: {
+                parts: [
+                    { text: systemInstruction }
+                ]
+            },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        ingredients: {
+                            type: "ARRAY",
+                            items: { type: "STRING" },
+                            description: "写真から認識した食材名のリスト"
+                        }
+                    },
+                    required: ["ingredients"]
+                }
+            }
+        };
+
+        return this._executeRequest(url, requestBody);
+    },
+
+    /**
+     * Call the Gemini API to analyze an image of ingredients and return recipes (Fallback/Legacy)
      * @param {string} base64Image - Base64 encoded image data (without data:image/... prefix)
      * @param {string} mimeType - The mime type of the image (e.g., 'image/jpeg')
      * @param {string} apiKey - Gemini API Key
@@ -57,7 +113,7 @@ const GeminiService = {
      * @param {string} apiKey - Gemini API Key
      * @returns {Promise<Object>} Recipes JSON
      */
-    async analyzeTextIngredients(ingredientsList, apiKey, mainIngredient = null, isUpgrade = false) {
+    async analyzeTextIngredients(ingredientsList, apiKey, mainIngredient = null, isUpgrade = false, isZubora = false) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.MODEL_NAME}:generateContent?key=${apiKey}`;
         
         let systemInstruction = 
@@ -66,6 +122,8 @@ const GeminiService = {
 
         if (isUpgrade) {
             systemInstruction += "\n今回は「食材をプラスするアップグレードレシピ」がテーマです。手持ちの食材に『もう1〜2個の食材を追加購入（プラス）することで、劇的に豪華で美味しくなるレシピ』を提案してください。追加する食材はスーパー等で手軽に買える一般的なものとします。";
+        } else if (isZubora) {
+            systemInstruction += "\n今回は「限界ずぼら・お手軽時短レシピ」がテーマです。手持ちの食材のみ（または水や調味料のみ）を使い、極めて簡単で手間がかからないレシピ（例: レンジ調理のみ、ワンパン/ワンポットでできる、工程が少ない、5分〜15分以内など）を提案してください。料理のハードルをとことん下げた、誰でも失敗なく作れるアイデアを重視します。";
         }
 
         const ingredientsText = ingredientsList.join(', ');
@@ -77,6 +135,8 @@ const GeminiService = {
 
         if (isUpgrade) {
             promptText += `【重要】今回は元の食材リストにない別の食材を追加するレシピを提案してください。各レシピの match_status フィールドには、「追加食材: 〇〇」のように、追加で用意すべき主要な食材の名前を分かりやすく記載してください。\n\n`;
+        } else if (isZubora) {
+            promptText += `【重要】今回はとにかく「簡単」「時短」「手間なし」のズボラレシピを提案してください。難易度は必ず「簡単」とし、調理時間は「15分以内」のものにしてください。各レシピの match_status フィールドには、「ズボラ度: ★★★」や「レンジで一発」のように、お手軽ポイントを簡潔に記載してください。\n\n`;
         }
 
         promptText += `回答は必ず指定されたJSONフォーマットに従って返してください。余計なマークダウン装飾や説明の文言は一切含めず、純粋なJSON文字列のみを出力してください。`;

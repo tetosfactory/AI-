@@ -23,6 +23,8 @@ const elements = {
     sectionApiKey: document.getElementById('section-api-key'),
     sectionInput: document.getElementById('section-input'),
     sectionLoading: document.getElementById('section-loading'),
+    loadingTitle: document.querySelector('#section-loading .loading-title'),
+    loadingSubtitle: document.querySelector('#section-loading .loading-subtitle'),
     sectionResults: document.getElementById('section-results'),
     
     // API Key settings
@@ -63,11 +65,13 @@ const elements = {
     inputAddIngredient: document.getElementById('input-add-ingredient'),
     btnAddIngredient: document.getElementById('btn-add-ingredient'),
     btnReanalyze: document.getElementById('btn-reanalyze'),
+    btnZubora: document.getElementById('btn-zubora'),
     btnUpgrade: document.getElementById('btn-upgrade'),
     recipesGrid: document.getElementById('recipes-grid'),
     btnReset: document.getElementById('btn-reset'),
     resultImageWrapper: document.getElementById('result-image-wrapper'),
     resultImagePreview: document.getElementById('result-image-preview'),
+    recipesHeaderWrapper: document.getElementById('recipes-header-wrapper'),
     
     // Modal Elements
     recipeModal: document.getElementById('recipe-modal'),
@@ -179,9 +183,10 @@ function setupEventListeners() {
     });
 
     // Analysis trigger
-    elements.btnAnalyze.addEventListener('click', () => performAnalysis(false, false));
-    elements.btnReanalyze.addEventListener('click', () => performAnalysis(true, false));
-    elements.btnUpgrade.addEventListener('click', () => performAnalysis(true, true));
+    elements.btnAnalyze.addEventListener('click', () => performAnalysis(false, false, false));
+    elements.btnReanalyze.addEventListener('click', () => performAnalysis(true, false, false));
+    elements.btnZubora.addEventListener('click', () => performAnalysis(true, false, true));
+    elements.btnUpgrade.addEventListener('click', () => performAnalysis(true, true, false));
 
     // Results interactions
     elements.btnAddIngredient.addEventListener('click', addNewIngredientChip);
@@ -272,16 +277,25 @@ function switchTab(tabId) {
 
 function toggleSubmitButton() {
     let showSubmit = false;
+    let buttonText = '';
+    let buttonIcon = '';
 
     if (state.activeTab === 'tab-camera') {
         showSubmit = !!state.capturedImageBase64;
+        buttonText = '写真から食材を認識する';
+        buttonIcon = '<i class="fa-solid fa-magnifying-glass-chart"></i> ';
     } else if (state.activeTab === 'tab-upload') {
         showSubmit = !!state.uploadedImageBase64;
+        buttonText = '画像から食材を認識する';
+        buttonIcon = '<i class="fa-solid fa-magnifying-glass-chart"></i> ';
     } else if (state.activeTab === 'tab-text') {
         showSubmit = elements.textareaIngredients.value.trim().length > 0;
+        buttonText = '入力した食材を確認する';
+        buttonIcon = '<i class="fa-solid fa-clipboard-list"></i> ';
     }
 
     if (showSubmit) {
+        elements.btnAnalyze.innerHTML = buttonIcon + buttonText;
         elements.submitSection.classList.remove('hidden');
     } else {
         elements.submitSection.classList.add('hidden');
@@ -439,11 +453,33 @@ function resetUploadView() {
 /* ==========================================================================
    GEMINI API ANALYSIS COORDINATOR
    ========================================================================== */
-async function performAnalysis(isReanalysis = false, isUpgrade = false) {
+async function performAnalysis(isReanalysis = false, isUpgrade = false, isZubora = false) {
     if (!state.apiKey) {
         showToast('APIキーが設定されていません。右上のギアマークから設定してください。', 'error');
         showSection(elements.sectionApiKey);
         return;
+    }
+
+    // Update loading text dynamically based on the step
+    if (isReanalysis) {
+        if (isUpgrade) {
+            elements.loadingTitle.textContent = '豪華なレシピを考案中...';
+            elements.loadingSubtitle.textContent = '食材をプラスしたごちそうレシピを考えています。しばらくお待ちください。';
+        } else if (isZubora) {
+            elements.loadingTitle.textContent = 'ズボラレシピを考案中...';
+            elements.loadingSubtitle.textContent = '最高に簡単で美味しい時短レシピを考えています。しばらくお待ちください。';
+        } else {
+            elements.loadingTitle.textContent = 'レシピを考案中...';
+            elements.loadingSubtitle.textContent = 'シェフが美味しいレシピを考えています。しばらくお待ちください。';
+        }
+    } else {
+        if (state.activeTab === 'tab-camera' || state.activeTab === 'tab-upload') {
+            elements.loadingTitle.textContent = '画像認識中...';
+            elements.loadingSubtitle.textContent = '写真から食材を読み取っています。しばらくお待ちください。';
+        } else {
+            elements.loadingTitle.textContent = '食材を整理中...';
+            elements.loadingSubtitle.textContent = '入力された食材を整理しています。しばらくお待ちください。';
+        }
     }
 
     showSection(elements.sectionLoading);
@@ -452,23 +488,34 @@ async function performAnalysis(isReanalysis = false, isUpgrade = false) {
         let result = null;
 
         if (isReanalysis) {
-            // Re-analyze using the current chips list
+            // Re-analyze / recipe generation using the current chips list (Step 2)
             if (state.currentIngredients.length === 0) {
                 throw new Error('食材リストが空です。レシピを提案するために食材を1つ以上指定してください。');
             }
-            result = await GeminiService.analyzeTextIngredients(state.currentIngredients, state.apiKey, state.mainIngredient, isUpgrade);
+            result = await GeminiService.analyzeTextIngredients(
+                state.currentIngredients, 
+                state.apiKey, 
+                state.mainIngredient, 
+                isUpgrade,
+                isZubora
+            );
+            
+            if (!result) throw new Error('レシピデータを取得できませんでした。');
+            
+            // Update Recipes
+            state.currentRecipes = result.recipes || [];
         } else {
-            // Primary initial analysis based on active tab
+            // Step 1: Ingredient Recognition only (do not generate recipes yet!)
             if (state.activeTab === 'tab-camera') {
                 if (!state.capturedImageBase64) throw new Error('撮影された写真がありません。');
-                result = await GeminiService.analyzeImage(
+                result = await GeminiService.recognizeIngredients(
                     state.capturedImageBase64, 
                     state.capturedImageMimeType, 
                     state.apiKey
                 );
             } else if (state.activeTab === 'tab-upload') {
                 if (!state.uploadedImageBase64) throw new Error('選択された画像ファイルがありません。');
-                result = await GeminiService.analyzeImage(
+                result = await GeminiService.recognizeIngredients(
                     state.uploadedImageBase64, 
                     state.uploadedImageMimeType, 
                     state.apiKey
@@ -481,8 +528,16 @@ async function performAnalysis(isReanalysis = false, isUpgrade = false) {
                 const items = rawText.split(/[,\n、\s]+/).map(i => i.trim()).filter(i => i.length > 0);
                 if (items.length === 0) throw new Error('有効な食材が入力されていません。');
                 
-                result = await GeminiService.analyzeTextIngredients(items, state.apiKey);
+                // Text ingredients can be recognized directly without API call
+                result = { ingredients: items };
             }
+            
+            if (!result) throw new Error('食材を認識できませんでした。');
+            
+            // Update Ingredients and clear recipes for Step 2
+            state.currentIngredients = result.ingredients || [];
+            state.currentRecipes = []; // Empty, waiting for Step 2
+            state.mainIngredient = null; // Reset main ingredient
         }
 
         if (!result) throw new Error('レシピデータを取得できませんでした。');
@@ -497,7 +552,21 @@ async function performAnalysis(isReanalysis = false, isUpgrade = false) {
 
     } catch (error) {
         console.error(error);
-        showToast(`エラーが発生しました: ${error.message}`, 'error');
+        
+        let friendlyMessage = error.message;
+        
+        // Translate common Gemini API errors to user-friendly Japanese
+        if (friendlyMessage.includes('Quota exceeded') || friendlyMessage.includes('exceeded your current quota') || friendlyMessage.includes('limit:')) {
+            friendlyMessage = 'Gemini APIの無料枠の制限（1分間あたりの利用上限）を超えました。約1分間待ってから再度お試しください。';
+        } else if (friendlyMessage.includes('API key not valid') || friendlyMessage.includes('API keyExpired')) {
+            friendlyMessage = 'APIキーが正しくないか、有効期限が切れています。右上のギアマークから正しいキーが設定されているかご確認ください。';
+        } else if (friendlyMessage.includes('experiencing high demand') || friendlyMessage.includes('Service Unavailable') || friendlyMessage.includes('503')) {
+            friendlyMessage = '現在、AIのアクセスが非常に集中しています。一時的なものですので、数十秒後に再度お試しください。';
+        } else if (friendlyMessage.includes('safety') || friendlyMessage.includes('blocked')) {
+            friendlyMessage = '写真またはテキストが安全設定に引っかかり、ブロックされました。別の角度から撮影するか、食材を変更してください。';
+        }
+        
+        showToast(`エラーが発生しました: ${friendlyMessage}`, 'error');
         
         // Go back to input screen
         showSection(elements.sectionInput);
@@ -541,24 +610,51 @@ function renderResults() {
         elements.ingredientsChips.appendChild(chip);
     });
 
-    // 2. Render Recipes Grid
+    // 2. Control visibility of Recipes Header and Grid based on whether we have recipes (Step 2)
     elements.recipesGrid.innerHTML = '';
     
     if (state.currentRecipes.length === 0) {
-        elements.recipesGrid.innerHTML = `
-            <div class="card text-center" style="grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text-secondary);">
-                <i class="fa-solid fa-face-frown" style="font-size: 3rem; margin-bottom: 12px; color: var(--border-color);"></i>
-                <p>提案できるレシピが見つかりませんでした。</p>
-                <p style="font-size: 0.8rem;">他の食材を追加してみるか、撮影し直してみてください。</p>
-            </div>
-        `;
+        // Hide recipes section and show call-to-action on buttons
+        elements.recipesHeaderWrapper.classList.add('hidden');
+        elements.recipesGrid.classList.add('hidden');
+        
+        // Show all proposal buttons for user selection
+        elements.btnReanalyze.innerHTML = `<i class="fa-solid fa-utensils"></i> 通常レシピを提案してもらう`;
+        elements.btnReanalyze.className = 'btn btn-primary btn-block';
+        
+        elements.btnZubora.innerHTML = `<i class="fa-solid fa-bolt"></i> ズボラレシピを提案（超簡単）`;
+        elements.btnZubora.className = 'btn btn-warning btn-block';
+        
+        elements.btnUpgrade.innerHTML = `<i class="fa-solid fa-crown"></i> アップグレードレシピを提案（食材プラス）`;
+        elements.btnUpgrade.className = 'btn btn-success btn-block';
+        
+        elements.btnZubora.classList.remove('hidden');
+        elements.btnUpgrade.classList.remove('hidden');
         return;
     }
 
+    // We have recipes! Show the sections
+    elements.recipesHeaderWrapper.classList.remove('hidden');
+    elements.recipesGrid.classList.remove('hidden');
+    
+    // Set search buttons text for re-search behavior
+    elements.btnReanalyze.innerHTML = `<i class="fa-solid fa-rotate-right"></i> 通常レシピで再検索`;
+    elements.btnReanalyze.className = 'btn btn-primary btn-block';
+    
+    elements.btnZubora.innerHTML = `<i class="fa-solid fa-bolt"></i> ズボラレシピで再検索`;
+    elements.btnZubora.className = 'btn btn-warning btn-block';
+    
+    elements.btnUpgrade.innerHTML = `<i class="fa-solid fa-crown"></i> アップグレードレシピで再検索`;
+    elements.btnUpgrade.className = 'btn btn-success btn-block';
+    
+    elements.btnZubora.classList.remove('hidden');
+    elements.btnUpgrade.classList.remove('hidden');
+
     state.currentRecipes.forEach((recipe, index) => {
-        // Check if this recipe requires added ingredients
+        // Check if this recipe requires added ingredients or is a lazy recipe
         const matchStatusText = recipe.match_status || '';
         const isUpgradeRecipe = matchStatusText.includes('追加食材') || matchStatusText.includes('追加');
+        const isZuboraRecipe = matchStatusText.includes('ズボラ') || matchStatusText.includes('限界ずぼら') || matchStatusText.includes('簡単') || matchStatusText.includes('ワンパン') || matchStatusText.includes('レンジ') || matchStatusText.includes('時短');
         
         const card = document.createElement('div');
         card.className = `recipe-card ${isUpgradeRecipe ? 'recipe-card-upgrade' : ''}`;
@@ -579,10 +675,17 @@ function renderResults() {
             `;
         }
 
+        let ribbonHtml = '';
+        if (isUpgradeRecipe) {
+            ribbonHtml = '<span class="ribbon-upgrade"><i class="fa-solid fa-wand-magic-sparkles"></i> ごちそう</span>';
+        } else if (isZuboraRecipe) {
+            ribbonHtml = '<span class="ribbon-zubora"><i class="fa-solid fa-bolt"></i> 超簡単ズボラ</span>';
+        }
+
         card.innerHTML = `
             <div class="recipe-card-header">
                 <h3 class="recipe-card-title">${escapeHTML(recipe.name)}</h3>
-                ${isUpgradeRecipe ? '<span class="ribbon-upgrade"><i class="fa-solid fa-wand-magic-sparkles"></i> ごちそう</span>' : ''}
+                ${ribbonHtml}
             </div>
             ${upgradeBadgeHtml}
             <div class="recipe-card-meta">

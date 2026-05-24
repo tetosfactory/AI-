@@ -192,17 +192,23 @@
                                 <i class="fa-solid fa-plus"></i> 追加
                             </button>
                         </div>
-                        <button id="btn-reanalyze" class="btn btn-primary btn-block mt-3">
-                            <i class="fa-solid fa-rotate-right"></i> この食材リストでレシピを再検索
-                        </button>
-                        <button id="btn-upgrade" class="btn btn-success btn-block mt-2">
-                            <i class="fa-solid fa-circle-arrow-up"></i> 食材をプラスしてごちそうレシピにする
-                        </button>
+                        <!-- レシピ提案のアクションボタングループ -->
+                        <div class="recipe-action-buttons" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                            <button id="btn-reanalyze" class="btn btn-primary btn-block" style="margin-top: 0;">
+                                <i class="fa-solid fa-utensils"></i> この食材でレシピを提案してもらう
+                            </button>
+                            <button id="btn-zubora" class="btn btn-warning btn-block">
+                                <i class="fa-solid fa-bolt"></i> ズボラレシピを提案（超簡単）
+                            </button>
+                            <button id="btn-upgrade" class="btn btn-success btn-block">
+                                <i class="fa-solid fa-circle-arrow-up"></i> アップグレードレシピを提案（食材プラス）
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Recipes List Section -->
-                <div class="recipes-header-wrapper fade-in">
+                <div id="recipes-header-wrapper" class="recipes-header-wrapper fade-in">
                     <h2 class="section-title"><i class="fa-solid fa-utensils"></i> おすすめレシピ</h2>
                     <p class="section-subtitle">以下のレシピが作れます！カードをタップして詳細を確認しましょう。</p>
                 </div>
