@@ -14,7 +14,8 @@ const state = {
     currentIngredients: [],
     currentRecipes: [],
     activeTab: 'tab-camera',
-    mainIngredient: null
+    mainIngredient: null,
+    recipeMode: 'normal' // 'normal', 'zubora', or 'upgrade'
 };
 
 // DOM Elements
@@ -492,6 +493,16 @@ async function performAnalysis(isReanalysis = false, isUpgrade = false, isZubora
             if (state.currentIngredients.length === 0) {
                 throw new Error('食材リストが空です。レシピを提案するために食材を1つ以上指定してください。');
             }
+            
+            // Save active recipe generation mode
+            if (isUpgrade) {
+                state.recipeMode = 'upgrade';
+            } else if (isZubora) {
+                state.recipeMode = 'zubora';
+            } else {
+                state.recipeMode = 'normal';
+            }
+            
             result = await GeminiService.analyzeTextIngredients(
                 state.currentIngredients, 
                 state.apiKey, 
@@ -637,6 +648,18 @@ function renderResults() {
     elements.recipesHeaderWrapper.classList.remove('hidden');
     elements.recipesGrid.classList.remove('hidden');
     
+    // Update Recipes Header Title based on the active recipe mode
+    const sectionTitleEl = elements.recipesHeaderWrapper.querySelector('.section-title');
+    if (sectionTitleEl) {
+        if (state.recipeMode === 'zubora') {
+            sectionTitleEl.innerHTML = `<i class="fa-solid fa-bolt" style="color: #f1c40f;"></i> おすすめズボラレシピ`;
+        } else if (state.recipeMode === 'upgrade') {
+            sectionTitleEl.innerHTML = `<i class="fa-solid fa-crown" style="color: #2ecc71;"></i> おすすめアップグレードレシピ`;
+        } else {
+            sectionTitleEl.innerHTML = `<i class="fa-solid fa-utensils"></i> おすすめレシピ`;
+        }
+    }
+    
     // Set search buttons text for re-search behavior
     elements.btnReanalyze.innerHTML = `<i class="fa-solid fa-rotate-right"></i> 通常レシピで再検索`;
     elements.btnReanalyze.className = 'btn btn-primary btn-block';
@@ -738,6 +761,7 @@ function resetToInputScreen() {
     resetUploadView();
     elements.textareaIngredients.value = '';
     state.mainIngredient = null;
+    state.recipeMode = 'normal';
     showSection(elements.sectionInput);
     
     if (state.activeTab === 'tab-camera') {
